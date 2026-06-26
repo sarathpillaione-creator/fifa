@@ -7,16 +7,15 @@ export default function Dashboard() {
   const [user, setUser] = useState<any>(null)
   const [dbUser, setDbUser] = useState<any>(null)
   const [allMatches, setAllMatches] = useState<any[]>([])
-  const [matches, setMatches] = useState<any[]>([]) // Used for "Predictions" tab
+  const [matches, setMatches] = useState<any[]>([]) 
   const [leaderboard, setLeaderboard] = useState<any[]>([])
   const [inputs, setInputs] = useState<any>({})
-  const [allPredictions, setAllPredictions] = useState<any[]>([]) // Stores everyone's predictions for the report
+  const [allPredictions, setAllPredictions] = useState<any[]>([]) 
   const [viewedUser, setViewedUser] = useState<any[] | null>(null)
   const [activeTab, setActiveTab] = useState<'predictions' | 'daily report' | 'leaderboard' | 'rules' | 'matches'>('predictions')
   const [selectedDate, setSelectedDate] = useState<string>('')
   const router = useRouter()
 
-  // Helper function to get YYYY-MM-DD in Bahrain Time
   const getBhrDateString = (dateObj: Date) => {
     const bhrTime = new Date(dateObj.toLocaleString("en-US", { timeZone: "Asia/Bahrain" }));
     const yr = bhrTime.getFullYear();
@@ -43,7 +42,6 @@ export default function Dashboard() {
       }
       setDbUser(existingUser)
 
-      // Calculate "Tomorrow" in Bahrain time for default filters
       const today = new Date();
       const tomorrowBhr = new Date(today.toLocaleString("en-US", { timeZone: "Asia/Bahrain" }));
       tomorrowBhr.setDate(tomorrowBhr.getDate() + 1);
@@ -52,11 +50,10 @@ export default function Dashboard() {
 
       const { data: mData } = await supabase.from('matches').select('*').order('kickoff_utc', { ascending: true })
       const { data: uData } = await supabase.from('users').select('*').order('total_score', { ascending: false })
-      const { data: allPData } = await supabase.from('predictions').select('*') // Get ALL predictions for daily report
+      const { data: allPData } = await supabase.from('predictions').select('*') 
       
       if (mData) {
         setAllMatches(mData)
-        // Predictions Tab: ONLY knockout matches (Match 73+) happening TOMORROW
         setMatches(mData.filter(m => m.match_number > 72 && getBhrDateString(new Date(m.kickoff_utc)) === tomorrowStr))
       }
       
@@ -64,7 +61,6 @@ export default function Dashboard() {
       
       if (allPData) {
         setAllPredictions(allPData)
-        // Map ONLY the logged-in user's predictions to the input states
         const saved: any = {}
         allPData.filter(p => p.user_id === session.user.id).forEach(p => {
           saved[p.match_number] = { 
@@ -96,7 +92,6 @@ export default function Dashboard() {
       alert("Error: " + error.message)
     } else {
       alert("Prediction Saved!")
-      // Silently update local state so the Daily Report reflects the new save instantly without refresh
       setAllPredictions(prev => {
         const filtered = prev.filter(pred => !(pred.user_id === user.id && pred.match_number === m.match_number))
         return [...filtered, { user_id: user.id, match_number: m.match_number, pred_home_goals: parseInt(p.home || 0), pred_away_goals: parseInt(p.away || 0), pred_winner: p.winner, pred_penalties: p.penalties === 'Yes' }]
@@ -104,7 +99,6 @@ export default function Dashboard() {
     }
   }
 
-  // Get matches specifically for the selected date in the Daily Report
   const dailyReportMatches = allMatches.filter(m => m.match_number > 72 && getBhrDateString(new Date(m.kickoff_utc)) === selectedDate);
 
   return (
@@ -204,16 +198,46 @@ export default function Dashboard() {
 
       {activeTab === 'rules' && (
         <div className="bg-white p-8 border-2 border-black font-bold text-lg leading-relaxed">
-          <h2 className="text-2xl font-black mb-6">SCORING RULES</h2>
-          <ul className="space-y-3">
-            <li>Group Stage: Winner (1), Goals (2)</li>
-            <li>Round of 32: Winner (2), Goals (3)</li>
-            <li>Round of 16: Winner (3), Goals (4)</li>
-            <li>Quarter-Finals: Winner (4), Goals (6)</li>
-            <li>Semis/Losers: Winner (5), Goals (8)</li>
-            <li>Finals: Winner (10), Goals (15)</li>
-            <li>Penalty Shootout: Correct pick (+3)</li>
-          </ul>
+          <h2 className="text-2xl font-black mb-6 border-b-2 border-black pb-2">SCORING RULES</h2>
+          
+          <div className="mb-6">
+            <h3 className="text-xl font-black mb-2 text-blue-700">How You Earn Points</h3>
+            <ul className="list-disc pl-6 space-y-3 text-slate-700">
+              <li><strong className="text-black">Advancing Team (Winner):</strong> Correctly predicting which team wins the match or advances to the next round.</li>
+              <li><strong className="text-black">Exact Goals:</strong> Correctly predicting the exact number of goals scored by <em>both</em> teams by the end of the match (excluding penalty shootouts).</li>
+              <li><strong className="text-black">Penalty Shootout:</strong> Correctly predicting whether the match will be decided by a penalty shootout gives a flat <strong>+3 points</strong> across all stages.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-black mb-4 text-blue-700">Points By Stage</h3>
+            <ul className="space-y-2 bg-slate-50 p-4 border-2 border-black text-base md:text-lg">
+              <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2">
+                <span><strong>Group Stage:</strong></span> 
+                <span className="text-slate-600">Winner: <strong className="text-black">1 pt</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">2 pts</strong></span>
+              </li>
+              <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2 pt-2">
+                <span><strong>Round of 32:</strong></span> 
+                <span className="text-slate-600">Winner: <strong className="text-black">2 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">3 pts</strong></span>
+              </li>
+              <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2 pt-2">
+                <span><strong>Round of 16:</strong></span> 
+                <span className="text-slate-600">Winner: <strong className="text-black">3 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">4 pts</strong></span>
+              </li>
+              <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2 pt-2">
+                <span><strong>Quarter-Finals:</strong></span> 
+                <span className="text-slate-600">Winner: <strong className="text-black">4 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">6 pts</strong></span>
+              </li>
+              <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2 pt-2">
+                <span><strong>Semi-Finals & Third Place:</strong></span> 
+                <span className="text-slate-600">Winner: <strong className="text-black">5 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">8 pts</strong></span>
+              </li>
+              <li className="flex flex-col md:flex-row md:justify-between pt-2">
+                <span><strong>Finals:</strong></span> 
+                <span className="text-slate-600">Winner: <strong className="text-black">10 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">15 pts</strong></span>
+              </li>
+            </ul>
+          </div>
         </div>
       )}
 
