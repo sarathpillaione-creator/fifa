@@ -12,7 +12,8 @@ export default function AdminPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (session && ADMIN_EMAILS.includes(session.user.email || "")) {
         setAuthorized(true)
-        const { data } = await supabase.from('matches').select('*').order('kickoff_utc', { ascending: true })
+        // Show only knockouts in Admin as well
+        const { data } = await supabase.from('matches').select('*').gt('match_number', 72).order('kickoff_utc', { ascending: true })
         setMatches(data || [])
       }
     }
@@ -35,13 +36,25 @@ export default function AdminPage() {
     const h = (document.getElementById(`h-${m.match_number}`) as any).value;
     const a = (document.getElementById(`a-${m.match_number}`) as any).value;
     const win = (document.getElementById(`w-${m.match_number}`) as any).value;
-    await supabase.from('matches').update({ actual_home_goals: h, actual_away_goals: a, actual_winner: win, is_completed: true }).eq('match_number', m.match_number);
+    const pens = (document.getElementById(`pen-${m.match_number}`) as any).value === 'Yes';
+    
+    await supabase.from('matches').update({ 
+      actual_home_goals: h, 
+      actual_away_goals: a, 
+      actual_winner: win, 
+      actual_penalties: pens,
+      is_completed: true 
+    }).eq('match_number', m.match_number);
+    
     const { data: preds } = await supabase.from('predictions').select('*').eq('match_number', m.match_number);
     for (let p of preds!) {
       let points = 0;
       if (p.pred_winner === win) points += 1;
       if (parseInt(p.pred_home_goals) === parseInt(h)) points += 2;
       if (parseInt(p.pred_away_goals) === parseInt(a)) points += 2;
+      // Add penalty prediction points
+      if (p.pred_penalties === pens) points += 3;
+      
       const { data: user } = await supabase.from('users').select('total_score').eq('id', p.user_id).single();
       await supabase.from('users').update({ total_score: (user?.total_score || 0) + points }).eq('id', p.user_id);
     }
@@ -65,13 +78,20 @@ export default function AdminPage() {
 
           <p className="text-sm font-bold text-slate-700 mb-4">{new Date(m.kickoff_utc).toLocaleString()}</p>
           
-          <div className="flex gap-2 mb-4 bg-slate-100 p-4 border-2 border-black">
-            <input type="number" id={`h-${m.match_number}`} defaultValue={m.actual_home_goals} className="border-2 border-black p-3 w-24 font-black text-xl text-black" placeholder="H Gls" />
-            <input type="number" id={`a-${m.match_number}`} defaultValue={m.actual_away_goals} className="border-2 border-black p-3 w-24 font-black text-xl text-black" placeholder="A Gls" />
-            <select id={`w-${m.match_number}`} defaultValue={m.actual_winner} className="w-full p-3 border-2 border-black font-black text-xl text-black">
-              <option value="">Select Winner</option>
-              <option value={m.home_team}>{m.home_team}</option>
-              <option value={m.away_team}>{m.away_team}</option>
+          <div className="flex flex-col gap-2 mb-4 bg-slate-100 p-4 border-2 border-black">
+            <div className="flex gap-2 w-full">
+              <input type="number" id={`h-${m.match_number}`} defaultValue={m.actual_home_goals} className="border-2 border-black p-3 w-24 font-black text-xl text-black" placeholder="H Gls" />
+              <input type="number" id={`a-${m.match_number}`} defaultValue={m.actual_away_goals} className="border-2 border-black p-3 w-24 font-black text-xl text-black" placeholder="A Gls" />
+              <select id={`w-${m.match_number}`} defaultValue={m.actual_winner} className="w-full p-3 border-2 border-black font-black text-xl text-black">
+                <option value="">Select Advancing Team</option>
+                <option value={m.home_team}>{m.home_team}</option>
+                <option value={m.away_team}>{m.away_team}</option>
+              </select>
+            </div>
+            {/* Admin Penalty Dropdown */}
+            <select id={`pen-${m.match_number}`} defaultValue={m.actual_penalties ? 'Yes' : 'No'} className="w-full p-3 border-2 border-black font-black text-xl text-blue-800 mt-2">
+              <option value="No">No Penalty Shootout</option>
+              <option value="Yes">Yes, Match went to Penalties</option>
             </select>
           </div>
           <button onClick={() => save(m)} className="w-full bg-black text-white p-4 font-black text-xl uppercase hover:bg-slate-800 transition-colors">SAVE MATCH RESULT</button>
