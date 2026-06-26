@@ -145,7 +145,8 @@ export default function Dashboard() {
                 <option value={m.away_team}>{m.away_team}</option>
               </select>
 
-              <select value={inputs[m.match_number]?.penalties || 'No'} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], penalties: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg text-blue-800">
+              <select value={inputs[m.match_number]?.penalties || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], penalties: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg text-blue-800">
+                <option value="">Select Penalty Shootout Option</option>
                 <option value="No">No Penalty Shootout</option>
                 <option value="Yes">Yes, Match goes to Penalties</option>
               </select>
