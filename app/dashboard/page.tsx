@@ -110,13 +110,12 @@ export default function Dashboard() {
         <div className="bg-white p-8 border-2 border-black font-bold text-lg leading-relaxed">
           <h2 className="text-2xl font-black mb-6">SCORING RULES</h2>
           <ul className="space-y-3">
-            <li>Group Stage: Winner (1), Goals (2)</li>
-            <li>Round of 32: Winner (2), Goals (3)</li>
+            <li>Round of 32: Correct predictionn of Winner (2 points), Correct Prediction of Goals before shootout (3 points per team)</li>
             <li>Round of 16: Winner (3), Goals (4)</li>
             <li>Quarter-Finals: Winner (4), Goals (6)</li>
             <li>Semis/Losers: Winner (5), Goals (8)</li>
             <li>Finals: Winner (10), Goals (15)</li>
-            <li>Penalty Shootout: Correct pick (+3)</li>
+            <li>Predict if there is a Penalty Shootout (3 points)</li>
           </ul>
         </div>
       )}
