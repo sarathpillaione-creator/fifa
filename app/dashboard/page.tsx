@@ -133,8 +133,6 @@ export default function Dashboard() {
               <p className="font-black text-xl mb-1">{m.home_team}(H) vs {m.away_team}(A)</p>
               <p className="text-sm font-bold text-slate-500 mb-2">{new Date(m.kickoff_utc).toLocaleString()}</p>
               
-              <p className="text-xs font-bold text-red-600 mb-4">* Predict each team’s goals by full time (excluding penalty shootout)</p>
-              
               <input type="number" value={inputs[m.match_number]?.home || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], home: e.target.value}})} className="border-2 border-black p-3 w-20 font-black text-lg" placeholder="H" />
               <input type="number" value={inputs[m.match_number]?.away || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], away: e.target.value}})} className="border-2 border-black p-3 w-20 font-black text-lg ml-2" placeholder="A" />
               
@@ -144,7 +142,8 @@ export default function Dashboard() {
                 <option value={m.away_team}>{m.away_team}</option>
               </select>
 
-              <select value={inputs[m.match_number]?.penalties || 'No'} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], penalties: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg text-blue-800">
+              <select value={inputs[m.match_number]?.penalties || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], penalties: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg text-blue-800">
+                <option value="">Select Penalty Shootout</option>
                 <option value="No">No Penalty Shootout</option>
                 <option value="Yes">Yes, Match goes to Penalties</option>
               </select>
@@ -161,33 +160,18 @@ export default function Dashboard() {
             <h2 className="text-2xl font-black">Filter by Date:</h2>
             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="border-2 border-black p-2 font-black text-lg" />
           </div>
-
-          {dailyReportMatches.length === 0 && <p className="font-bold text-xl text-slate-500">No knockout matches found for this date.</p>}
-
           {dailyReportMatches.map(m => (
-            <div key={m.match_number} className="mb-8 border-b-4 border-slate-200 pb-6 last:border-0">
+            <div key={m.match_number} className="mb-8 border-b-4 border-slate-200 pb-6">
               <h3 className="text-2xl font-black mb-1">{m.home_team} vs {m.away_team}</h3>
-              <p className="text-sm font-bold text-slate-500 mb-4">{new Date(m.kickoff_utc).toLocaleString()}</p>
-              
-              <div className="flex flex-col gap-2">
-                {allPredictions.filter(p => p.match_number === m.match_number).length === 0 ? (
-                  <p className="italic font-bold text-slate-400">No predictions submitted yet.</p>
-                ) : (
-                  allPredictions.filter(p => p.match_number === m.match_number).map(p => {
-                    const predUser = leaderboard.find(u => u.id === p.user_id);
-                    return (
-                      <div key={p.user_id} className="bg-slate-100 p-3 border-2 border-black flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
-                        <span className="font-black text-lg">{predUser?.name || 'Unknown User'}</span>
-                        <div className="flex flex-wrap gap-4 text-sm font-bold bg-white px-3 py-1 border border-black">
-                          <span><span className="text-slate-500">Winner:</span> {p.pred_winner}</span>
-                          <span><span className="text-slate-500">Goals:</span> {p.pred_home_goals} - {p.pred_away_goals}</span>
-                          <span><span className="text-slate-500">Penalties:</span> <span className={p.pred_penalties ? 'text-red-600' : 'text-blue-600'}>{p.pred_penalties ? 'Yes' : 'No'}</span></span>
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
-              </div>
+              {allPredictions.filter(p => p.match_number === m.match_number).map(p => {
+                const predUser = leaderboard.find(u => u.id === p.user_id);
+                return (
+                  <div key={p.user_id} className="bg-slate-100 p-3 border-2 border-black flex flex-col md:flex-row justify-between items-center gap-2 mb-2">
+                    <span className="font-black text-lg">{predUser?.name}</span>
+                    <span className="font-bold text-sm bg-white p-1 border border-black">Winner: {p.pred_winner} | Goals: {p.pred_home_goals}-{p.pred_away_goals} | Pen: {p.pred_penalties ? 'Yes' : 'No'}</span>
+                  </div>
+                )
+              })}
             </div>
           ))}
         </div>
@@ -196,7 +180,6 @@ export default function Dashboard() {
       {activeTab === 'leaderboard' && (viewedUser ? 
         <div className="bg-white p-6 border-2 border-black">
           <button onClick={() => setViewedUser(null)} className="font-black mb-4">← BACK</button>
-          <div className="font-black text-lg mb-4 text-blue-600">User ID: {viewedUser[0]?.user_id.slice(-6).toUpperCase()}</div>
           {viewedUser.map(p => <div key={p.id} className="border-b py-2 font-bold text-lg">Match {p.match_number}: {p.pred_home_goals}-{p.pred_away_goals} ({p.pred_winner}) {p.pred_penalties ? ' [Penalties: Yes]' : ''}</div>)}
         </div> : 
         leaderboard.filter(u => u.total_score > 0).map((u, i) => <div key={u.id} onClick={async () => { const {data} = await supabase.from('predictions').select('*').eq('user_id', u.id); setViewedUser(data); }} className="bg-white p-4 mb-2 border-2 border-black font-black text-lg cursor-pointer flex justify-between">{i+1}. {u.name} <span>{u.total_score} pts</span></div>)
@@ -205,38 +188,31 @@ export default function Dashboard() {
       {activeTab === 'rules' && (
         <div className="bg-white p-8 border-2 border-black font-bold text-lg leading-relaxed">
           <h2 className="text-2xl font-black mb-6 border-b-2 border-black pb-2">SCORING RULES</h2>
-          
           <div className="mb-6">
             <h3 className="text-xl font-black mb-2 text-blue-700">How You Earn Points</h3>
             <ul className="list-disc pl-6 space-y-3 text-slate-700">
-              <li><strong className="text-black">Winning Team:</strong> Correctly predicting which team wins the match or advances to the next round.</li>
-              <li><strong className="text-black">Exact Goals:</strong> Correctly predicting the exact number of goals scored by <em>both</em> teams by the end of the match (excluding penalty shootouts).</li>
-              <li><strong className="text-black">Penalty Shootout:</strong> Correctly predicting whether the match will be decided by a penalty shootout gives a flat <strong>+3 points</strong> across all stages.</li>
+              <li><strong className="text-black">Winning Team:</strong> Correctly predicting which team wins the match.</li>
+              <li><strong className="text-black">Exact Goals:</strong> Points are earned for each team's score guessed correctly (Home/Away are scored separately).</li>
+              <li><strong className="text-black">Penalty Shootout:</strong> Correctly predicting whether the match will be decided by a penalty shootout gives a flat <strong>+3 points</strong>.</li>
             </ul>
           </div>
-
           <div>
             <h3 className="text-xl font-black mb-4 text-blue-700">Points By Stage</h3>
             <ul className="space-y-2 bg-slate-50 p-4 border-2 border-black text-base md:text-lg">
               <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2">
-                <span><strong>Round of 32:</strong></span> 
-                <span className="text-slate-600">Winner: <strong className="text-black">2 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">3 pts</strong></span>
+                <span><strong>Round of 32:</strong></span> <span className="text-slate-600">Winner: 2 pts | Per Goal: 3 pts</span>
               </li>
               <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2 pt-2">
-                <span><strong>Round of 16:</strong></span> 
-                <span className="text-slate-600">Winner: <strong className="text-black">3 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">4 pts</strong></span>
+                <span><strong>Round of 16:</strong></span> <span className="text-slate-600">Winner: 3 pts | Per Goal: 4 pts</span>
               </li>
               <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2 pt-2">
-                <span><strong>Quarter-Finals:</strong></span> 
-                <span className="text-slate-600">Winner: <strong className="text-black">4 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">6 pts</strong></span>
+                <span><strong>Quarter-Finals:</strong></span> <span className="text-slate-600">Winner: 4 pts | Per Goal: 6 pts</span>
               </li>
               <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2 pt-2">
-                <span><strong>Semi-Finals & Third Place:</strong></span> 
-                <span className="text-slate-600">Winner: <strong className="text-black">5 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">8 pts</strong></span>
+                <span><strong>Semi-Finals & Third Place:</strong></span> <span className="text-slate-600">Winner: 5 pts | Per Goal: 8 pts</span>
               </li>
               <li className="flex flex-col md:flex-row md:justify-between pt-2">
-                <span><strong>Finals:</strong></span> 
-                <span className="text-slate-600">Winner: <strong className="text-black">10 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">15 pts</strong></span>
+                <span><strong>Finals:</strong></span> <span className="text-slate-600">Winner: 10 pts | Per Goal: 15 pts</span>
               </li>
             </ul>
           </div>
