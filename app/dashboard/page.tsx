@@ -64,8 +64,8 @@ export default function Dashboard() {
         const saved: any = {}
         allPData.filter(p => p.user_id === session.user.id).forEach(p => {
           saved[p.match_number] = { 
-            home: p.pred_home_goals, 
-            away: p.pred_away_goals, 
+            home: p.pred_home_goals?.toString(), 
+            away: p.pred_away_goals?.toString(), 
             winner: p.pred_winner,
             penalties: p.pred_penalties ? 'Yes' : 'No'
           }
@@ -79,12 +79,24 @@ export default function Dashboard() {
   const savePred = async (m: any) => {
     if (!user) return
     const p = inputs[m.match_number] || {}
+
+    // Mandatory Field Validation Check
+    if (
+      p.home === undefined || p.home === '' ||
+      p.away === undefined || p.away === '' ||
+      !p.winner ||
+      !p.penalties
+    ) {
+      alert("Please complete all fields (Home Goals, Away Goals, Winning Team, and Penalty Shootout) before saving.");
+      return;
+    }
+
     const { error } = await supabase.from('predictions').upsert({
       user_id: user.id,
       match_number: m.match_number,
-      pred_home_goals: parseInt(p.home || 0),
-      pred_away_goals: parseInt(p.away || 0),
-      pred_winner: p.winner || null,
+      pred_home_goals: parseInt(p.home),
+      pred_away_goals: parseInt(p.away),
+      pred_winner: p.winner,
       pred_penalties: p.penalties === 'Yes'
     }, { onConflict: 'user_id, match_number' })
     
@@ -94,7 +106,7 @@ export default function Dashboard() {
       alert("Prediction Saved!")
       setAllPredictions(prev => {
         const filtered = prev.filter(pred => !(pred.user_id === user.id && pred.match_number === m.match_number))
-        return [...filtered, { user_id: user.id, match_number: m.match_number, pred_home_goals: parseInt(p.home || 0), pred_away_goals: parseInt(p.away || 0), pred_winner: p.winner, pred_penalties: p.penalties === 'Yes' }]
+        return [...filtered, { user_id: user.id, match_number: m.match_number, pred_home_goals: parseInt(p.home), pred_away_goals: parseInt(p.away), pred_winner: p.winner, pred_penalties: p.penalties === 'Yes' }]
       })
     }
   }
@@ -129,8 +141,8 @@ export default function Dashboard() {
               
               <p className="text-xs font-bold text-red-600 mb-4">* Predict each team’s goals by full time (excluding penalty shootout)</p>
               
-              <input type="number" value={inputs[m.match_number]?.home || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], home: e.target.value}})} className="border-2 border-black p-3 w-20 font-black text-lg" placeholder="H" />
-              <input type="number" value={inputs[m.match_number]?.away || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], away: e.target.value}})} className="border-2 border-black p-3 w-20 font-black text-lg ml-2" placeholder="A" />
+              <input type="number" value={inputs[m.match_number]?.home ?? ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], home: e.target.value}})} className="border-2 border-black p-3 w-20 font-black text-lg" placeholder="H" />
+              <input type="number" value={inputs[m.match_number]?.away ?? ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], away: e.target.value}})} className="border-2 border-black p-3 w-20 font-black text-lg ml-2" placeholder="A" />
               
               <select value={inputs[m.match_number]?.winner || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], winner: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg">
                 <option value="">Select Winning Team</option>
@@ -138,7 +150,8 @@ export default function Dashboard() {
                 <option value={m.away_team}>{m.away_team}</option>
               </select>
 
-              <select value={inputs[m.match_number]?.penalties || 'No'} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], penalties: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg text-blue-800">
+              <select value={inputs[m.match_number]?.penalties || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], penalties: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg text-blue-800">
+                <option value="">Select Penalty Shootout Option</option>
                 <option value="No">No Penalty Shootout</option>
                 <option value="Yes">Yes, Match goes to Penalties</option>
               </select>
