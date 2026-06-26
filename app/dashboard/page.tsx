@@ -80,9 +80,8 @@ export default function Dashboard() {
     if (!user) return
     const p = inputs[m.match_number] || {}
     
-    // Mandatory Field Validation Check
     if (p.home === undefined || p.home === '' || p.away === undefined || p.away === '' || !p.winner || !p.penalties) {
-      alert("Please complete all fields (Home Goals, Away Goals, Winning Team, and Penalty Shootout) before saving.");
+      alert("Please complete all fields (Goals, Winning Team, and Penalty Shootout) before saving.");
       return;
     }
 
@@ -145,8 +144,7 @@ export default function Dashboard() {
                 <option value={m.away_team}>{m.away_team}</option>
               </select>
 
-              <select value={inputs[m.match_number]?.penalties || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], penalties: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg text-blue-800">
-                <option value="">Select Penalty Shootout Option</option>
+              <select value={inputs[m.match_number]?.penalties || 'No'} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], penalties: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg text-blue-800">
                 <option value="No">No Penalty Shootout</option>
                 <option value="Yes">Yes, Match goes to Penalties</option>
               </select>
