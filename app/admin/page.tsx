@@ -27,7 +27,7 @@ export default function AdminPage() {
       alert("Error updating teams: " + error.message);
     } else {
       alert("Teams Updated!");
-      window.location.reload(); // Reloads to update the dropdowns with new names
+      window.location.reload(); 
     }
   }
 
@@ -56,7 +56,6 @@ export default function AdminPage() {
       {matches.map(m => (
         <div key={m.match_number} className="bg-white p-6 mb-6 rounded-2xl shadow-sm border-4 border-black">
           
-          {/* Edit Teams Section for Knockouts/TBDs */}
           <div className="flex flex-col md:flex-row gap-2 mb-2">
             <input type="text" id={`ht-${m.match_number}`} defaultValue={m.home_team} className="border-2 border-black p-2 font-black text-xl text-black w-full" />
             <span className="font-black text-xl text-black self-center">VS</span>
@@ -66,14 +65,12 @@ export default function AdminPage() {
 
           <p className="text-sm font-bold text-slate-700 mb-4">{new Date(m.kickoff_utc).toLocaleString()}</p>
           
-          {/* Match Score & Result Section */}
           <div className="flex gap-2 mb-4 bg-slate-100 p-4 border-2 border-black">
             <input type="number" id={`h-${m.match_number}`} defaultValue={m.actual_home_goals} className="border-2 border-black p-3 w-24 font-black text-xl text-black" placeholder="H Gls" />
             <input type="number" id={`a-${m.match_number}`} defaultValue={m.actual_away_goals} className="border-2 border-black p-3 w-24 font-black text-xl text-black" placeholder="A Gls" />
             <select id={`w-${m.match_number}`} defaultValue={m.actual_winner} className="w-full p-3 border-2 border-black font-black text-xl text-black">
-              <option value="">Select Winner/Draw</option>
+              <option value="">Select Winner</option>
               <option value={m.home_team}>{m.home_team}</option>
-              <option value="Draw">Draw</option>
               <option value={m.away_team}>{m.away_team}</option>
             </select>
           </div>
