@@ -80,6 +80,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-50 p-6 text-black">
       <div className="flex justify-between items-start mb-8">
         <h1 className="text-3xl font-black">McDonald's Bahrain World Cup Predictor</h1>
+        <h3 className="text-3xl font-red">Predict each team’s goals by full time (excluding penalty shootout)</h3>
         {dbUser && (
           <div className="text-right font-bold text-sm bg-white p-2 border border-black">
             <div>{dbUser.name}</div>
