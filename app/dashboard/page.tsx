@@ -32,29 +32,25 @@ export default function Dashboard() {
       }
       setDbUser(existingUser)
 
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const tomorrowEnd = new Date(today)
-      tomorrowEnd.setDate(today.getDate() + 2)
-
       const { data: mData } = await supabase.from('matches').select('*').order('kickoff_utc', { ascending: true })
       const { data: uData } = await supabase.from('users').select('*').order('total_score', { ascending: false })
       const { data: pData } = await supabase.from('predictions').select('*').eq('user_id', session.user.id)
       
       if (mData) {
-        setAllMatches(mData) // Save ALL matches for the Matches tab
-        
-        // Filter only today and tomorrow for the Predictions tab
-        setMatches(mData.filter(m => {
-          const mDate = new Date(m.kickoff_utc)
-          return mDate >= today && mDate < tomorrowEnd
-        }))
+        setAllMatches(mData)
+        // Show ONLY knockout matches (Match 73 and above) all the time
+        setMatches(mData.filter(m => m.match_number > 72))
       }
       
       if (uData) setLeaderboard(uData)
       if (pData) {
         const saved: any = {}
-        pData.forEach(p => saved[p.match_number] = { home: p.pred_home_goals, away: p.pred_away_goals, winner: p.pred_winner })
+        pData.forEach(p => saved[p.match_number] = { 
+          home: p.pred_home_goals, 
+          away: p.pred_away_goals, 
+          winner: p.pred_winner,
+          penalties: p.pred_penalties ? 'Yes' : 'No'
+        })
         setInputs(saved)
       }
     }
@@ -69,7 +65,8 @@ export default function Dashboard() {
       match_number: m.match_number,
       pred_home_goals: parseInt(p.home || 0),
       pred_away_goals: parseInt(p.away || 0),
-      pred_winner: p.winner || null
+      pred_winner: p.winner || null,
+      pred_penalties: p.penalties === 'Yes'
     }, { onConflict: 'user_id, match_number' })
     
     if (error) alert("Error: " + error.message)
@@ -80,7 +77,6 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-50 p-6 text-black">
       <div className="flex justify-between items-start mb-8">
         <h1 className="text-3xl font-black">McDonald's Bahrain World Cup Predictor</h1>
-        <h3 className="text-3xl font-red">Predict each team’s goals by full time (excluding penalty shootout)</h3>
         {dbUser && (
           <div className="text-right font-bold text-sm bg-white p-2 border border-black">
             <div>{dbUser.name}</div>
@@ -98,15 +94,27 @@ export default function Dashboard() {
       {activeTab === 'predictions' && matches.map(m => (
         <div key={m.match_number} className="bg-white p-6 mb-4 border-2 border-black rounded shadow-sm">
           <p className="font-black text-xl mb-1">{m.home_team} vs {m.away_team}</p>
-          <p className="text-sm font-bold text-slate-500 mb-4">{new Date(m.kickoff_utc).toLocaleString()}</p>
+          <p className="text-sm font-bold text-slate-500 mb-2">{new Date(m.kickoff_utc).toLocaleString()}</p>
+          
+          {/* Disclaimer Text */}
+          <p className="text-xs font-bold text-red-600 mb-4">* Predict each team’s goals by full time (excluding penalty shootout)</p>
+          
           <input type="number" value={inputs[m.match_number]?.home || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], home: e.target.value}})} className="border-2 border-black p-3 w-20 font-black text-lg" placeholder="H" />
           <input type="number" value={inputs[m.match_number]?.away || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], away: e.target.value}})} className="border-2 border-black p-3 w-20 font-black text-lg ml-2" placeholder="A" />
+          
           <select value={inputs[m.match_number]?.winner || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], winner: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg">
-            <option value="">Select Winner</option>
+            <option value="">Select Advancing Team</option>
             <option value={m.home_team}>{m.home_team}</option>
             <option value={m.away_team}>{m.away_team}</option>
           </select>
-          <button onClick={() => savePred(m)} className="w-full bg-blue-600 text-white p-4 mt-4 font-black text-lg">SAVE PREDICTION</button>
+
+          {/* New Penalty Shootout Dropdown */}
+          <select value={inputs[m.match_number]?.penalties || 'No'} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], penalties: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg text-blue-800">
+            <option value="No">No Penalty Shootout</option>
+            <option value="Yes">Yes, Match goes to Penalties</option>
+          </select>
+
+          <button onClick={() => savePred(m)} className="w-full bg-blue-600 text-white p-4 mt-4 font-black text-lg hover:bg-blue-700">SAVE PREDICTION</button>
         </div>
       ))}
 
@@ -114,7 +122,7 @@ export default function Dashboard() {
         <div className="bg-white p-6 border-2 border-black">
           <button onClick={() => setViewedUser(null)} className="font-black mb-4">← BACK</button>
           <div className="font-black text-lg mb-4 text-blue-600">User ID: {viewedUser[0]?.user_id.slice(-6).toUpperCase()}</div>
-          {viewedUser.map(p => <div key={p.id} className="border-b py-2 font-bold text-lg">Match {p.match_number}: {p.pred_home_goals}-{p.pred_away_goals} ({p.pred_winner})</div>)}
+          {viewedUser.map(p => <div key={p.id} className="border-b py-2 font-bold text-lg">Match {p.match_number}: {p.pred_home_goals}-{p.pred_away_goals} ({p.pred_winner}) {p.pred_penalties ? ' [Penalties: Yes]' : ''}</div>)}
         </div> : 
         leaderboard.map((u, i) => <div key={u.id} onClick={async () => { const {data} = await supabase.from('predictions').select('*').eq('user_id', u.id); setViewedUser(data); }} className="bg-white p-4 mb-2 border-2 border-black font-black text-lg cursor-pointer flex justify-between">{i+1}. {u.name} <span>{u.total_score} pts</span></div>)
       )}
