@@ -205,16 +205,42 @@ export default function Dashboard() {
 
       {activeTab === 'rules' && (
         <div className="bg-white p-8 border-2 border-black font-bold text-lg leading-relaxed">
-          <h2 className="text-2xl font-black mb-6">SCORING RULES</h2>
-          <ul className="space-y-3">
-            <li>Group Stage: Winner (1), Goals (2)</li>
-            <li>Round of 32: Winner (2), Goals (3)</li>
-            <li>Round of 16: Winner (3), Goals (4)</li>
-            <li>Quarter-Finals: Winner (4), Goals (6)</li>
-            <li>Semis/Losers: Winner (5), Goals (8)</li>
-            <li>Finals: Winner (10), Goals (15)</li>
-            <li>Penalty Shootout: Correct pick (+3)</li>
-          </ul>
+          <h2 className="text-2xl font-black mb-6 border-b-2 border-black pb-2">SCORING RULES</h2>
+          
+          <div className="mb-6">
+            <h3 className="text-xl font-black mb-2 text-blue-700">How You Earn Points</h3>
+            <ul className="list-disc pl-6 space-y-3 text-slate-700">
+              <li><strong className="text-black">Winning Team:</strong> Correctly predicting which team wins the match or advances to the next round.</li>
+              <li><strong className="text-black">Exact Goals:</strong> Correctly predicting the exact number of goals scored by <em>both</em> teams by the end of the match (excluding penalty shootouts).</li>
+              <li><strong className="text-black">Penalty Shootout:</strong> Correctly predicting whether the match will be decided by a penalty shootout gives a flat <strong>+3 points</strong> across all stages.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-black mb-4 text-blue-700">Points By Stage</h3>
+            <ul className="space-y-2 bg-slate-50 p-4 border-2 border-black text-base md:text-lg">
+              <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2">
+                <span><strong>Round of 32:</strong></span> 
+                <span className="text-slate-600">Winner: <strong className="text-black">2 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">3 pts</strong></span>
+              </li>
+              <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2 pt-2">
+                <span><strong>Round of 16:</strong></span> 
+                <span className="text-slate-600">Winner: <strong className="text-black">3 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">4 pts</strong></span>
+              </li>
+              <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2 pt-2">
+                <span><strong>Quarter-Finals:</strong></span> 
+                <span className="text-slate-600">Winner: <strong className="text-black">4 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">6 pts</strong></span>
+              </li>
+              <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2 pt-2">
+                <span><strong>Semi-Finals & Third Place:</strong></span> 
+                <span className="text-slate-600">Winner: <strong className="text-black">5 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">8 pts</strong></span>
+              </li>
+              <li className="flex flex-col md:flex-row md:justify-between pt-2">
+                <span><strong>Finals:</strong></span> 
+                <span className="text-slate-600">Winner: <strong className="text-black">10 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">15 pts</strong></span>
+              </li>
+            </ul>
+          </div>
         </div>
       )}
 
