@@ -133,7 +133,7 @@ export default function Dashboard() {
               <input type="number" value={inputs[m.match_number]?.away || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], away: e.target.value}})} className="border-2 border-black p-3 w-20 font-black text-lg ml-2" placeholder="A" />
               
               <select value={inputs[m.match_number]?.winner || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], winner: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg">
-                <option value="">Select Advancing Team</option>
+                <option value="">Select Winning Team</option>
                 <option value={m.home_team}>{m.home_team}</option>
                 <option value={m.away_team}>{m.away_team}</option>
               </select>
@@ -193,7 +193,11 @@ export default function Dashboard() {
           <div className="font-black text-lg mb-4 text-blue-600">User ID: {viewedUser[0]?.user_id.slice(-6).toUpperCase()}</div>
           {viewedUser.map(p => <div key={p.id} className="border-b py-2 font-bold text-lg">Match {p.match_number}: {p.pred_home_goals}-{p.pred_away_goals} ({p.pred_winner}) {p.pred_penalties ? ' [Penalties: Yes]' : ''}</div>)}
         </div> : 
-        leaderboard.map((u, i) => <div key={u.id} onClick={async () => { const {data} = await supabase.from('predictions').select('*').eq('user_id', u.id); setViewedUser(data); }} className="bg-white p-4 mb-2 border-2 border-black font-black text-lg cursor-pointer flex justify-between">{i+1}. {u.name} <span>{u.total_score} pts</span></div>)
+        (leaderboard.filter(u => u.total_score > 0).length === 0 ? 
+          <div className="bg-white p-8 border-2 border-black font-black text-xl text-center text-slate-600">No scores yet. Check back after the first match!</div> 
+          : 
+          leaderboard.filter(u => u.total_score > 0).map((u, i) => <div key={u.id} onClick={async () => { const {data} = await supabase.from('predictions').select('*').eq('user_id', u.id); setViewedUser(data); }} className="bg-white p-4 mb-2 border-2 border-black font-black text-lg cursor-pointer flex justify-between">{i+1}. {u.name} <span>{u.total_score} pts</span></div>)
+        )
       )}
 
       {activeTab === 'rules' && (
@@ -203,7 +207,7 @@ export default function Dashboard() {
           <div className="mb-6">
             <h3 className="text-xl font-black mb-2 text-blue-700">How You Earn Points</h3>
             <ul className="list-disc pl-6 space-y-3 text-slate-700">
-              <li><strong className="text-black">Advancing Team (Winner):</strong> Correctly predicting which team wins the match or advances to the next round.</li>
+              <li><strong className="text-black">Winning Team:</strong> Correctly predicting which team wins the match or advances to the next round.</li>
               <li><strong className="text-black">Exact Goals:</strong> Correctly predicting the exact number of goals scored by <em>both</em> teams by the end of the match (excluding penalty shootouts).</li>
               <li><strong className="text-black">Penalty Shootout:</strong> Correctly predicting whether the match will be decided by a penalty shootout gives a flat <strong>+3 points</strong> across all stages.</li>
             </ul>
@@ -213,10 +217,6 @@ export default function Dashboard() {
             <h3 className="text-xl font-black mb-4 text-blue-700">Points By Stage</h3>
             <ul className="space-y-2 bg-slate-50 p-4 border-2 border-black text-base md:text-lg">
               <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2">
-                <span><strong>Group Stage:</strong></span> 
-                <span className="text-slate-600">Winner: <strong className="text-black">1 pt</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">2 pts</strong></span>
-              </li>
-              <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2 pt-2">
                 <span><strong>Round of 32:</strong></span> 
                 <span className="text-slate-600">Winner: <strong className="text-black">2 pts</strong> <span className="mx-2">|</span> Goals: <strong className="text-black">3 pts</strong></span>
               </li>
