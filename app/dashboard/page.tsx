@@ -254,11 +254,11 @@ export default function Dashboard() {
         </div>
       )}
 
-      {activeTab === 'matches' && allMatches.filter(m => m.match_number > 72).map(m => (
-        <div key={m.match_number} className="bg-white p-4 mb-2 border-2 border-black font-black text-lg">
-          Match {m.match_number}: {m.home_team} vs {m.away_team} <span className="text-blue-600">({new Date(m.kickoff_utc).toLocaleDateString()})</span>
-        </div>
-      ))}
+     {activeTab === 'matches' && allMatches.filter(m => m.match_number > 72).map(m => (
+  <div key={m.match_number} className="bg-white p-4 mb-2 border-2 border-black font-black text-lg">
+    Match {m.match_number}: {m.home_team}(H) vs {m.away_team}(A) <span className="text-blue-600">({new Date(m.kickoff_utc).toLocaleDateString()})</span>
+  </div>
+))}
     </div>
   )
 }
