@@ -7,12 +7,23 @@ export default function Dashboard() {
   const [user, setUser] = useState<any>(null)
   const [dbUser, setDbUser] = useState<any>(null)
   const [allMatches, setAllMatches] = useState<any[]>([])
-  const [matches, setMatches] = useState<any[]>([])
+  const [matches, setMatches] = useState<any[]>([]) // Used for "Predictions" tab
   const [leaderboard, setLeaderboard] = useState<any[]>([])
   const [inputs, setInputs] = useState<any>({})
+  const [allPredictions, setAllPredictions] = useState<any[]>([]) // Stores everyone's predictions for the report
   const [viewedUser, setViewedUser] = useState<any[] | null>(null)
-  const [activeTab, setActiveTab] = useState<'predictions' | 'leaderboard' | 'rules' | 'matches'>('predictions')
+  const [activeTab, setActiveTab] = useState<'predictions' | 'daily report' | 'leaderboard' | 'rules' | 'matches'>('predictions')
+  const [selectedDate, setSelectedDate] = useState<string>('')
   const router = useRouter()
+
+  // Helper function to get YYYY-MM-DD in Bahrain Time
+  const getBhrDateString = (dateObj: Date) => {
+    const bhrTime = new Date(dateObj.toLocaleString("en-US", { timeZone: "Asia/Bahrain" }));
+    const yr = bhrTime.getFullYear();
+    const mo = String(bhrTime.getMonth() + 1).padStart(2, '0');
+    const da = String(bhrTime.getDate()).padStart(2, '0');
+    return `${yr}-${mo}-${da}`;
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -32,24 +43,36 @@ export default function Dashboard() {
       }
       setDbUser(existingUser)
 
+      // Calculate "Tomorrow" in Bahrain time for default filters
+      const today = new Date();
+      const tomorrowBhr = new Date(today.toLocaleString("en-US", { timeZone: "Asia/Bahrain" }));
+      tomorrowBhr.setDate(tomorrowBhr.getDate() + 1);
+      const tomorrowStr = getBhrDateString(tomorrowBhr);
+      setSelectedDate(tomorrowStr);
+
       const { data: mData } = await supabase.from('matches').select('*').order('kickoff_utc', { ascending: true })
       const { data: uData } = await supabase.from('users').select('*').order('total_score', { ascending: false })
-      const { data: pData } = await supabase.from('predictions').select('*').eq('user_id', session.user.id)
+      const { data: allPData } = await supabase.from('predictions').select('*') // Get ALL predictions for daily report
       
       if (mData) {
         setAllMatches(mData)
-        // Show ONLY knockout matches (Match 73 and above) all the time
-        setMatches(mData.filter(m => m.match_number > 72))
+        // Predictions Tab: ONLY knockout matches (Match 73+) happening TOMORROW
+        setMatches(mData.filter(m => m.match_number > 72 && getBhrDateString(new Date(m.kickoff_utc)) === tomorrowStr))
       }
       
       if (uData) setLeaderboard(uData)
-      if (pData) {
+      
+      if (allPData) {
+        setAllPredictions(allPData)
+        // Map ONLY the logged-in user's predictions to the input states
         const saved: any = {}
-        pData.forEach(p => saved[p.match_number] = { 
-          home: p.pred_home_goals, 
-          away: p.pred_away_goals, 
-          winner: p.pred_winner,
-          penalties: p.pred_penalties ? 'Yes' : 'No'
+        allPData.filter(p => p.user_id === session.user.id).forEach(p => {
+          saved[p.match_number] = { 
+            home: p.pred_home_goals, 
+            away: p.pred_away_goals, 
+            winner: p.pred_winner,
+            penalties: p.pred_penalties ? 'Yes' : 'No'
+          }
         })
         setInputs(saved)
       }
@@ -69,9 +92,20 @@ export default function Dashboard() {
       pred_penalties: p.penalties === 'Yes'
     }, { onConflict: 'user_id, match_number' })
     
-    if (error) alert("Error: " + error.message)
-    else alert("Prediction Saved!")
+    if (error) {
+      alert("Error: " + error.message)
+    } else {
+      alert("Prediction Saved!")
+      // Silently update local state so the Daily Report reflects the new save instantly without refresh
+      setAllPredictions(prev => {
+        const filtered = prev.filter(pred => !(pred.user_id === user.id && pred.match_number === m.match_number))
+        return [...filtered, { user_id: user.id, match_number: m.match_number, pred_home_goals: parseInt(p.home || 0), pred_away_goals: parseInt(p.away || 0), pred_winner: p.winner, pred_penalties: p.penalties === 'Yes' }]
+      })
+    }
   }
+
+  // Get matches specifically for the selected date in the Daily Report
+  const dailyReportMatches = allMatches.filter(m => m.match_number > 72 && getBhrDateString(new Date(m.kickoff_utc)) === selectedDate);
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 text-black">
@@ -86,37 +120,78 @@ export default function Dashboard() {
       </div>
 
       <div className="flex gap-2 mb-6 text-lg font-black flex-wrap">
-        {(['predictions', 'leaderboard', 'rules', 'matches'] as const).map(t => (
-          <button key={t} onClick={() => {setActiveTab(t); setViewedUser(null)}} className={`px-4 py-2 ${activeTab === t ? 'underline' : ''}`}>{t.toUpperCase()}</button>
+        {(['predictions', 'daily report', 'leaderboard', 'rules', 'matches'] as const).map(t => (
+          <button key={t} onClick={() => {setActiveTab(t); setViewedUser(null)}} className={`px-4 py-2 uppercase ${activeTab === t ? 'underline bg-black text-white' : 'bg-white border-2 border-black'}`}>{t}</button>
         ))}
       </div>
 
-      {activeTab === 'predictions' && matches.map(m => (
-        <div key={m.match_number} className="bg-white p-6 mb-4 border-2 border-black rounded shadow-sm">
-          <p className="font-black text-xl mb-1">{m.home_team} vs {m.away_team}</p>
-          <p className="text-sm font-bold text-slate-500 mb-2">{new Date(m.kickoff_utc).toLocaleString()}</p>
-          
-          {/* Disclaimer Text */}
-          <p className="text-xs font-bold text-red-600 mb-4">* Predict each team’s goals by full time (excluding penalty shootout)</p>
-          
-          <input type="number" value={inputs[m.match_number]?.home || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], home: e.target.value}})} className="border-2 border-black p-3 w-20 font-black text-lg" placeholder="H" />
-          <input type="number" value={inputs[m.match_number]?.away || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], away: e.target.value}})} className="border-2 border-black p-3 w-20 font-black text-lg ml-2" placeholder="A" />
-          
-          <select value={inputs[m.match_number]?.winner || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], winner: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg">
-            <option value="">Select Advancing Team</option>
-            <option value={m.home_team}>{m.home_team}</option>
-            <option value={m.away_team}>{m.away_team}</option>
-          </select>
+      {activeTab === 'predictions' && (
+        <>
+          {matches.length === 0 && <p className="font-bold text-xl p-4 bg-white border-2 border-black">No matches scheduled for tomorrow.</p>}
+          {matches.map(m => (
+            <div key={m.match_number} className="bg-white p-6 mb-4 border-2 border-black rounded shadow-sm">
+              <p className="font-black text-xl mb-1">{m.home_team} vs {m.away_team}</p>
+              <p className="text-sm font-bold text-slate-500 mb-2">{new Date(m.kickoff_utc).toLocaleString()}</p>
+              
+              <p className="text-xs font-bold text-red-600 mb-4">* Predict each team’s goals by full time (excluding penalty shootout)</p>
+              
+              <input type="number" value={inputs[m.match_number]?.home || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], home: e.target.value}})} className="border-2 border-black p-3 w-20 font-black text-lg" placeholder="H" />
+              <input type="number" value={inputs[m.match_number]?.away || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], away: e.target.value}})} className="border-2 border-black p-3 w-20 font-black text-lg ml-2" placeholder="A" />
+              
+              <select value={inputs[m.match_number]?.winner || ''} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], winner: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg">
+                <option value="">Select Advancing Team</option>
+                <option value={m.home_team}>{m.home_team}</option>
+                <option value={m.away_team}>{m.away_team}</option>
+              </select>
 
-          {/* New Penalty Shootout Dropdown */}
-          <select value={inputs[m.match_number]?.penalties || 'No'} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], penalties: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg text-blue-800">
-            <option value="No">No Penalty Shootout</option>
-            <option value="Yes">Yes, Match goes to Penalties</option>
-          </select>
+              <select value={inputs[m.match_number]?.penalties || 'No'} onChange={(e) => setInputs({...inputs, [m.match_number]: {...inputs[m.match_number], penalties: e.target.value}})} className="border-2 border-black p-3 w-full mt-2 font-black text-lg text-blue-800">
+                <option value="No">No Penalty Shootout</option>
+                <option value="Yes">Yes, Match goes to Penalties</option>
+              </select>
 
-          <button onClick={() => savePred(m)} className="w-full bg-blue-600 text-white p-4 mt-4 font-black text-lg hover:bg-blue-700">SAVE PREDICTION</button>
+              <button onClick={() => savePred(m)} className="w-full bg-blue-600 text-white p-4 mt-4 font-black text-lg hover:bg-blue-700">SAVE PREDICTION</button>
+            </div>
+          ))}
+        </>
+      )}
+
+      {activeTab === 'daily report' && (
+        <div className="bg-white p-6 border-2 border-black rounded shadow-sm">
+          <div className="flex items-center gap-4 mb-6 pb-4 border-b-2 border-black">
+            <h2 className="text-2xl font-black">Filter by Date:</h2>
+            <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="border-2 border-black p-2 font-black text-lg" />
+          </div>
+
+          {dailyReportMatches.length === 0 && <p className="font-bold text-xl text-slate-500">No knockout matches found for this date.</p>}
+
+          {dailyReportMatches.map(m => (
+            <div key={m.match_number} className="mb-8 border-b-4 border-slate-200 pb-6 last:border-0">
+              <h3 className="text-2xl font-black mb-1">{m.home_team} vs {m.away_team}</h3>
+              <p className="text-sm font-bold text-slate-500 mb-4">{new Date(m.kickoff_utc).toLocaleString()}</p>
+              
+              <div className="flex flex-col gap-2">
+                {allPredictions.filter(p => p.match_number === m.match_number).length === 0 ? (
+                  <p className="italic font-bold text-slate-400">No predictions submitted yet.</p>
+                ) : (
+                  allPredictions.filter(p => p.match_number === m.match_number).map(p => {
+                    const predUser = leaderboard.find(u => u.id === p.user_id);
+                    return (
+                      <div key={p.user_id} className="bg-slate-100 p-3 border-2 border-black flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+                        <span className="font-black text-lg">{predUser?.name || 'Unknown User'}</span>
+                        <div className="flex flex-wrap gap-4 text-sm font-bold bg-white px-3 py-1 border border-black">
+                          <span><span className="text-slate-500">Winner:</span> {p.pred_winner}</span>
+                          <span><span className="text-slate-500">Goals:</span> {p.pred_home_goals} - {p.pred_away_goals}</span>
+                          <span><span className="text-slate-500">Penalties:</span> <span className={p.pred_penalties ? 'text-red-600' : 'text-blue-600'}>{p.pred_penalties ? 'Yes' : 'No'}</span></span>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
 
       {activeTab === 'leaderboard' && (viewedUser ? 
         <div className="bg-white p-6 border-2 border-black">
