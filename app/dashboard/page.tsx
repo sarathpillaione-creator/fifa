@@ -149,7 +149,7 @@ export default function Dashboard() {
 
       {activeTab === 'predictions' && (
         <>
-          {matches.length === 0 && <p className="font-bold text-xl p-4 bg-white border-2 border-black">No matches scheduled for tomorrow.</p>}
+          {matches.length === 0 && <p className="font-bold text-xl p-4 bg-white border-2 border-black">One Family Prediciton App Loading....</p>}
           {matches.map(m => (
             <div key={m.match_number} className="bg-white p-6 mb-4 border-2 border-black rounded shadow-sm">
               <p className="text-xs font-bold text-red-600 mb-4">* Predict each team’s goals by full time (excluding penalty shootout)</p>
