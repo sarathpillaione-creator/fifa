@@ -152,6 +152,7 @@ export default function Dashboard() {
           {matches.length === 0 && <p className="font-bold text-xl p-4 bg-white border-2 border-black">No matches scheduled for tomorrow.</p>}
           {matches.map(m => (
             <div key={m.match_number} className="bg-white p-6 mb-4 border-2 border-black rounded shadow-sm">
+              <p className="text-xs font-bold text-red-600 mb-4">* Predict each team’s goals by full time (excluding penalty shootout)</p>
               <p className="font-black text-xl mb-1">{m.home_team}(H) vs {m.away_team}(A)</p>
               <p className="text-sm font-bold text-slate-500 mb-2">{new Date(m.kickoff_utc).toLocaleString()}</p>
               <input type="number" value={inputs[m.match_number]?.home ?? ''} onChange={(e) => handlePredictionChange(m, 'home', e.target.value)} className="border-2 border-black p-3 w-20 font-black text-lg" placeholder="H" />
