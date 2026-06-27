@@ -91,7 +91,7 @@ export default function Dashboard() {
       updatedPred.penalties
     ) {
       
-      // Validation Check for Winner vs Goals when Penalties = 'No'
+      // Validation Check for Winner vs Goals & Draws when Penalties = 'No'
       const hG = parseInt(updatedPred.home);
       const aG = parseInt(updatedPred.away);
       
@@ -102,6 +102,10 @@ export default function Dashboard() {
         }
         if (aG > hG && updatedPred.winner === m.home_team) {
           alert(`Invalid: ${m.home_team} cannot be the winner without penalties if ${m.away_team} scored more goals.`);
+          return; // Prevent auto-save
+        }
+        if (hG === aG) {
+          alert(`Invalid: If the teams have the same number of goals, Penalty Shootout must be 'Yes'.`);
           return; // Prevent auto-save
         }
       }
@@ -188,6 +192,7 @@ export default function Dashboard() {
                 if (p.penalties === 'No') {
                   if (hG > aG && p.winner === m.away_team) return null;
                   if (aG > hG && p.winner === m.home_team) return null;
+                  if (hG === aG) return null; // Hide if drawn goals but no penalties
                 }
                 
                 return <p className="text-sm font-black text-green-600 mt-3">✓ Prediction Auto-Saved</p>;
