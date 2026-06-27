@@ -76,23 +76,36 @@ export default function Dashboard() {
     init()
   }, [router])
 
-  // New Auto-Save Handler
   const handlePredictionChange = async (m: any, field: string, value: string) => {
     if (!user) return;
     
     const currentPred = inputs[m.match_number] || {};
     const updatedPred = { ...currentPred, [field]: value };
     
-    // 1. Update UI state immediately
     setInputs((prev: any) => ({ ...prev, [m.match_number]: updatedPred }));
     
-    // 2. Check if all fields are filled before saving to database
     if (
       updatedPred.home !== undefined && updatedPred.home !== '' &&
       updatedPred.away !== undefined && updatedPred.away !== '' &&
       updatedPred.winner &&
       updatedPred.penalties
     ) {
+      
+      // Validation Check for Winner vs Goals when Penalties = 'No'
+      const hG = parseInt(updatedPred.home);
+      const aG = parseInt(updatedPred.away);
+      
+      if (updatedPred.penalties === 'No') {
+        if (hG > aG && updatedPred.winner === m.away_team) {
+          alert(`Invalid: ${m.away_team} cannot be the winner without penalties if ${m.home_team} scored more goals.`);
+          return; // Prevent auto-save
+        }
+        if (aG > hG && updatedPred.winner === m.home_team) {
+          alert(`Invalid: ${m.home_team} cannot be the winner without penalties if ${m.away_team} scored more goals.`);
+          return; // Prevent auto-save
+        }
+      }
+
       const { error } = await supabase.from('predictions').upsert({
         user_id: user.id,
         match_number: m.match_number,
@@ -105,7 +118,6 @@ export default function Dashboard() {
       if (error) {
         console.error("Auto-save error:", error.message);
       } else {
-        // Update allPredictions so Daily Report stays updated without refresh
         setAllPredictions(prev => {
           const filtered = prev.filter(pred => !(pred.user_id === user.id && pred.match_number === m.match_number));
           return [...filtered, { 
@@ -161,17 +173,25 @@ export default function Dashboard() {
               </select>
 
               <select value={inputs[m.match_number]?.penalties || ''} onChange={(e) => handlePredictionChange(m, 'penalties', e.target.value)} className="border-2 border-black p-3 w-full mt-2 font-black text-lg text-blue-800">
-                <option value="">Select Penalty Shootout Option</option>
+                <option value="">Select Penalty Shootout</option>
                 <option value="No">No Penalty Shootout</option>
                 <option value="Yes">Yes, Match goes to Penalties</option>
               </select>
 
-              {/* Visual feedback so user knows auto-save worked */}
-              {inputs[m.match_number]?.home !== undefined && inputs[m.match_number]?.home !== '' &&
-               inputs[m.match_number]?.away !== undefined && inputs[m.match_number]?.away !== '' &&
-               inputs[m.match_number]?.winner && inputs[m.match_number]?.penalties && (
-                 <p className="text-sm font-black text-green-600 mt-3">✓ Prediction Auto-Saved</p>
-              )}
+              {/* Show checkmark ONLY if everything is filled and valid */}
+              {(() => {
+                const p = inputs[m.match_number];
+                if (!p || p.home === undefined || p.home === '' || p.away === undefined || p.away === '' || !p.winner || !p.penalties) return null;
+                
+                const hG = parseInt(p.home);
+                const aG = parseInt(p.away);
+                if (p.penalties === 'No') {
+                  if (hG > aG && p.winner === m.away_team) return null;
+                  if (aG > hG && p.winner === m.home_team) return null;
+                }
+                
+                return <p className="text-sm font-black text-green-600 mt-3">✓ Prediction Auto-Saved</p>;
+              })()}
             </div>
           ))}
         </>
@@ -246,23 +266,23 @@ export default function Dashboard() {
             <ul className="space-y-2 bg-slate-50 p-4 border-2 border-black text-base md:text-lg">
               <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2">
                 <span><strong>Round of 32:</strong></span> 
-                <span className="text-slate-600">Winner: <strong className="text-black">1 pt</strong> <span className="mx-2">|</span> Per Goal: <strong className="text-black">2 pts</strong></span>
-              </li>
-              <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2 pt-2">
-                <span><strong>Round of 16:</strong></span> 
                 <span className="text-slate-600">Winner: <strong className="text-black">2 pts</strong> <span className="mx-2">|</span> Per Goal: <strong className="text-black">3 pts</strong></span>
               </li>
               <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2 pt-2">
-                <span><strong>Quarter-Finals:</strong></span> 
+                <span><strong>Round of 16:</strong></span> 
                 <span className="text-slate-600">Winner: <strong className="text-black">3 pts</strong> <span className="mx-2">|</span> Per Goal: <strong className="text-black">4 pts</strong></span>
               </li>
               <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2 pt-2">
-                <span><strong>Semi-Finals & Third Place:</strong></span> 
+                <span><strong>Quarter-Finals:</strong></span> 
                 <span className="text-slate-600">Winner: <strong className="text-black">4 pts</strong> <span className="mx-2">|</span> Per Goal: <strong className="text-black">6 pts</strong></span>
+              </li>
+              <li className="flex flex-col md:flex-row md:justify-between border-b border-slate-300 pb-2 pt-2">
+                <span><strong>Semi-Finals & Third Place:</strong></span> 
+                <span className="text-slate-600">Winner: <strong className="text-black">5 pts</strong> <span className="mx-2">|</span> Per Goal: <strong className="text-black">8 pts</strong></span>
               </li>
               <li className="flex flex-col md:flex-row md:justify-between pt-2">
                 <span><strong>Finals:</strong></span> 
-                <span className="text-slate-600">Winner: <strong className="text-black">5 pts</strong> <span className="mx-2">|</span> Per Goal: <strong className="text-black">10 pts</strong></span>
+                <span className="text-slate-600">Winner: <strong className="text-black">10 pts</strong> <span className="mx-2">|</span> Per Goal: <strong className="text-black">15 pts</strong></span>
               </li>
             </ul>
           </div>
