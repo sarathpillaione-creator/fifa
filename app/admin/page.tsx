@@ -67,26 +67,33 @@ export default function AdminPage() {
       <h1 className="text-3xl font-black mb-8">ADMIN PANEL</h1>
       {matches.map(m => (
         <div key={m.match_number} className="bg-white p-6 mb-6 rounded-2xl shadow-sm border-4 border-black">
+          
           <div className="flex flex-col md:flex-row gap-2 mb-2">
-            <input type="text" id={`ht-${m.match_number}`} defaultValue={m.home_team} className="border-2 border-black p-2 font-black text-xl w-full" />
-            <span className="font-black text-xl self-center">VS</span>
-            <input type="text" id={`at-${m.match_number}`} defaultValue={m.away_team} className="border-2 border-black p-2 font-black text-xl w-full" />
-            <button onClick={() => updateTeams(m)} className="bg-blue-600 text-white px-4 py-2 font-black">UPDATE</button>
+            <input type="text" id={`ht-${m.match_number}`} defaultValue={m.home_team} className="border-2 border-black p-2 font-black text-xl text-black w-full" />
+            <span className="font-black text-xl text-black self-center">VS</span>
+            <input type="text" id={`at-${m.match_number}`} defaultValue={m.away_team} className="border-2 border-black p-2 font-black text-xl text-black w-full" />
+            <button onClick={() => updateTeams(m)} className="bg-blue-600 text-white px-4 py-2 font-black text-lg border-2 border-black whitespace-nowrap hover:bg-blue-700">UPDATE TEAMS</button>
           </div>
+
+          {/* Date is restored right here */}
+          <p className="text-sm font-bold text-slate-700 mb-4">{new Date(m.kickoff_utc).toLocaleString()}</p>
+          
           <div className="flex flex-col gap-2 mb-4 bg-slate-100 p-4 border-2 border-black">
-            <input type="number" id={`h-${m.match_number}`} defaultValue={m.actual_home_goals} className="border-2 border-black p-3" placeholder="Home Goals" />
-            <input type="number" id={`a-${m.match_number}`} defaultValue={m.actual_away_goals} className="border-2 border-black p-3" placeholder="Away Goals" />
-            <select id={`w-${m.match_number}`} defaultValue={m.actual_winner} className="p-3 border-2 border-black">
-              <option value="">Select Winning Team</option>
-              <option value={m.home_team}>{m.home_team}</option>
-              <option value={m.away_team}>{m.away_team}</option>
-            </select>
-            <select id={`pen-${m.match_number}`} defaultValue={m.actual_penalties ? 'Yes' : 'No'} className="p-3 border-2 border-black">
+            <div className="flex gap-2 w-full">
+              <input type="number" id={`h-${m.match_number}`} defaultValue={m.actual_home_goals} className="border-2 border-black p-3 w-24 font-black text-xl text-black" placeholder="H Gls" />
+              <input type="number" id={`a-${m.match_number}`} defaultValue={m.actual_away_goals} className="border-2 border-black p-3 w-24 font-black text-xl text-black" placeholder="A Gls" />
+              <select id={`w-${m.match_number}`} defaultValue={m.actual_winner} className="w-full p-3 border-2 border-black font-black text-xl text-black">
+                <option value="">Select Winning Team</option>
+                <option value={m.home_team}>{m.home_team}</option>
+                <option value={m.away_team}>{m.away_team}</option>
+              </select>
+            </div>
+            <select id={`pen-${m.match_number}`} defaultValue={m.actual_penalties ? 'Yes' : 'No'} className="w-full p-3 border-2 border-black font-black text-xl text-blue-800 mt-2">
               <option value="No">No Penalty Shootout</option>
               <option value="Yes">Yes, Match went to Penalties</option>
             </select>
           </div>
-          <button onClick={() => save(m)} className="w-full bg-black text-white p-4 font-black">SAVE RESULT</button>
+          <button onClick={() => save(m)} className="w-full bg-black text-white p-4 font-black text-xl uppercase hover:bg-slate-800 transition-colors">SAVE MATCH RESULT</button>
         </div>
       ))}
     </div>
