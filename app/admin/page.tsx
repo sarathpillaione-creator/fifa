@@ -33,31 +33,51 @@ export default function AdminPage() {
     const win = (document.getElementById(`w-${m.match_number}`) as any).value;
     const pens = (document.getElementById(`pen-${m.match_number}`) as any).value === 'Yes';
     
+    // 1. Save the actual result to the match
     await supabase.from('matches').update({ 
       actual_home_goals: h, actual_away_goals: a, actual_winner: win, actual_penalties: pens, is_completed: true 
     }).eq('match_number', m.match_number);
     
-    const { data: preds } = await supabase.from('predictions').select('*').eq('match_number', m.match_number);
-    const mNum = m.match_number;
-    let wP = 0, gP = 0;
-    
-    if (mNum <= 88) { wP = 2; gP = 3; }
-    else if (mNum <= 96) { wP = 3; gP = 4; }
-    else if (mNum <= 100) { wP = 4; gP = 6; }
-    else if (mNum <= 102) { wP = 5; gP = 8; }
-    else { wP = 10; gP = 15; }
+    // 2. Fetch ALL completed matches and ALL predictions to recalculate the entire leaderboard
+    const { data: allMatches } = await supabase.from('matches').select('*').eq('is_completed', true);
+    const { data: allPreds } = await supabase.from('predictions').select('*');
+    const { data: allUsers } = await supabase.from('users').select('*');
 
-    for (let p of preds!) {
-      let points = 0;
-      if (p.pred_winner === win) points += wP;
-      if (parseInt(p.pred_home_goals) === parseInt(h)) points += gP;
-      if (parseInt(p.pred_away_goals) === parseInt(a)) points += gP;
-      if (p.pred_penalties === pens) points += 3;
+    if (!allMatches || !allPreds || !allUsers) return;
+
+    // Reset everyone's score temporarily in memory
+    let newScores: any = {};
+    allUsers.forEach(u => newScores[u.id] = 0);
+
+    // 3. Loop through every completed match and correctly award points
+    allMatches.forEach(match => {
+      const mNum = match.match_number;
+      let wP = 0, gP = 0;
       
-      const { data: user } = await supabase.from('users').select('total_score').eq('id', p.user_id).single();
-      await supabase.from('users').update({ total_score: (user?.total_score || 0) + points }).eq('id', p.user_id);
+      if (mNum <= 88) { wP = 2; gP = 3; }
+      else if (mNum <= 96) { wP = 3; gP = 4; }
+      else if (mNum <= 100) { wP = 4; gP = 6; }
+      else if (mNum <= 102) { wP = 5; gP = 8; }
+      else { wP = 10; gP = 15; }
+
+      const matchPreds = allPreds.filter(p => p.match_number === match.match_number);
+      
+      matchPreds.forEach(p => {
+        if (newScores[p.user_id] === undefined) newScores[p.user_id] = 0;
+        
+        if (p.pred_winner === match.actual_winner) newScores[p.user_id] += wP;
+        if (parseInt(p.pred_home_goals) === parseInt(match.actual_home_goals)) newScores[p.user_id] += gP;
+        if (parseInt(p.pred_away_goals) === parseInt(match.actual_away_goals)) newScores[p.user_id] += gP;
+        if (p.pred_penalties === match.actual_penalties) newScores[p.user_id] += 3;
+      });
+    });
+
+    // 4. Update the users table with the true, recalculated scores
+    for (let userId in newScores) {
+      await supabase.from('users').update({ total_score: newScores[userId] }).eq('id', userId);
     }
-    alert("Match Result & Scores Updated!");
+    
+    alert("Match Result Saved & Leaderboard Fully Recalculated!");
   }
 
   if (!authorized) return <div className="p-8 text-2xl font-black text-black">Access Denied</div>
@@ -75,7 +95,6 @@ export default function AdminPage() {
             <button onClick={() => updateTeams(m)} className="bg-blue-600 text-white px-4 py-2 font-black text-lg border-2 border-black whitespace-nowrap hover:bg-blue-700">UPDATE TEAMS</button>
           </div>
 
-          {/* Date is restored right here */}
           <p className="text-sm font-bold text-slate-700 mb-4">{new Date(m.kickoff_utc).toLocaleString()}</p>
           
           <div className="flex flex-col gap-2 mb-4 bg-slate-100 p-4 border-2 border-black">
